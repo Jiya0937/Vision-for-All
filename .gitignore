@@ -1,0 +1,13 @@
+﻿venv/
+node_modules/
+__pycache__/
+*.pyc
+*.zip
+*.pyd
+*.dll
+.env
+*.pt
+backend/dataset/breille/train/
+backend/dataset/breille/valid/
+backend/dataset/breille/test/
+runs/
