@@ -1,54 +1,51 @@
 import cv2
 import numpy as np
-from utils.preprocess import preprocess_for_braille, find_dots
-from utils.dot_to_pattern import dots_to_pattern
-from utils.braille_mapping import pattern_to_letter
+from ultralytics import YOLO
+import os
+
+BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
+MODEL_PATH = os.path.join(BASE_DIR, '..', '..', 'model', 'best.pt')
+model      = YOLO(MODEL_PATH)
+
+# Use model's own class names
+CLASSES = model.names
 
 def detect_braille_from_image(image_path: str) -> str:
-    """
-    Full pipeline: image file → Braille text
-    """
-    # Step 1: Load image
     img = cv2.imread(image_path)
     if img is None:
         return "Error: Could not load image"
 
-    # Step 2: Preprocess
-    binary = preprocess_for_braille(img)
+    results = model(img, conf=0.25, verbose=False)
+    boxes   = results[0].boxes
 
-    # Step 3: Find all dots
-    dots = find_dots(binary)
-
-    if not dots:
+    if len(boxes) == 0:
         return "No Braille dots detected"
 
-    # Step 4: Get image dimensions as one big cell
-    h, w = binary.shape
-    pattern = dots_to_pattern(dots, 0, 0, w, h)
+    cells = []
+    for i, box in enumerate(boxes.xyxy.cpu().numpy()):
+        x1, y1, x2, y2 = map(int, box)
+        class_id = int(boxes.cls[i].cpu().numpy())
+        char     = CLASSES.get(class_id, '?')
+        cells.append({'box': (x1, y1, x2, y2), 'char': char})
 
-    # Step 5: Convert to letter
-    letter = pattern_to_letter(pattern)
-
-    return f"Detected pattern: {pattern} → Letter: {letter}"
+    cells.sort(key=lambda c: (c['box'][1] // 40, c['box'][0]))
+    text = ' '.join(c['char'] for c in cells)
+    return f"Detected pattern: {text} → Letter: {text}"
 
 def detect_braille_from_frame(frame: np.ndarray) -> str:
-    """
-    Full pipeline: webcam frame → Braille text
-    """
-    # Step 1: Preprocess
-    binary = preprocess_for_braille(frame)
+    results = model(frame, conf=0.25, verbose=False)
+    boxes   = results[0].boxes
 
-    # Step 2: Find dots
-    dots = find_dots(binary)
-
-    if not dots:
+    if len(boxes) == 0:
         return "No dots detected"
 
-    # Step 3: Get pattern
-    h, w = binary.shape
-    pattern = dots_to_pattern(dots, 0, 0, w, h)
+    cells = []
+    for i, box in enumerate(boxes.xyxy.cpu().numpy()):
+        x1, y1, x2, y2 = map(int, box)
+        class_id = int(boxes.cls[i].cpu().numpy())
+        char     = CLASSES.get(class_id, '?')
+        cells.append({'box': (x1, y1, x2, y2), 'char': char})
 
-    # Step 4: Convert to letter
-    letter = pattern_to_letter(pattern)
-
-    return f"{pattern} → {letter}"
+    cells.sort(key=lambda c: (c['box'][1] // 40, c['box'][0]))
+    text = ' '.join(c['char'] for c in cells)
+    return f"{text} → {text}"

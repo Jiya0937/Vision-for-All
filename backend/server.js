@@ -1,101 +1,110 @@
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
+const express  = require('express');
+const cors     = require('cors');
+const path     = require('path');
+const FormData = require('form-data');
+const fetch    = require('node-fetch');
+const multer   = require('multer');
 
-const app = express();
+const app  = express();
 const PORT = process.env.PORT || 5000;
+const FLASK_API = process.env.FLASK_API_URL || 'http://localhost:8000';
 
-// Enable CORS for all requests
 app.use(cors());
-
-// Parse JSON and URL-encoded bodies
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.static(path.join(__dirname, '..', 'frontend')));
 
-// Serve frontend static files
-app.use(express.static(path.join(__dirname, '../frontend')));
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
 
-// Import Routes
 const authRoutes = require('./routes/auth');
 app.use('/api', authRoutes);
 
-// Mock Detection Endpoint
-app.post('/api/detect', (req, res) => {
+app.post('/api/detect', upload.single('image'), async (req, res) => {
   try {
-    const { imageName, language } = req.body;
-    
-    // Simulate model inference time (1.5 seconds)
-    setTimeout(() => {
-      // Sample translations
-      const englishTranslations = [
-        { text: "HELLO WORLD", confidence: 99.1 },
-        { text: "VISION FOR ALL", confidence: 98.4 },
-        { text: "WELCOME TO HACKATHON", confidence: 97.8 },
-        { text: "BRAILLE DETECTED SUCCESSFULLY", confidence: 99.4 },
-        { text: "INNOVATIVE AI SOLUTION", confidence: 96.5 }
-      ];
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No image uploaded' });
+    }
 
-      const hindiTranslations = [
-        { text: "नमस्ते दुनिया (HELLO WORLD)", confidence: 98.7 },
-        { text: "सभी के लिए दृष्टि (VISION FOR ALL)", confidence: 97.5 },
-        { text: "हैकथॉन में आपका स्वागत है", confidence: 98.2 },
-        { text: "जय हिन्द (JAY HIND)", confidence: 99.6 },
-        { text: "नया सवेरा (NEW DAWN)", confidence: 96.9 }
-      ];
+    const form = new FormData();
+    form.append('image', req.file.buffer, {
+      filename:    req.file.originalname || 'upload.jpg',
+      contentType: req.file.mimetype     || 'image/jpeg',
+    });
 
-      const list = (language === 'HI' || language === 'Hindi') ? hindiTranslations : englishTranslations;
-      
-      // Determine index based on the hash of imageName, to keep it consistent for the same image name
-      let sum = 0;
-      if (imageName) {
-        for (let i = 0; i < imageName.length; i++) {
-          sum += imageName.charCodeAt(i);
-        }
-      } else {
-        sum = Math.floor(Math.random() * 100);
-      }
-      const selectedIndex = sum % list.length;
-      const result = list[selectedIndex];
+    const flaskRes = await fetch(`${FLASK_API}/detect`, {
+      method:  'POST',
+      body:    form,
+      headers: form.getHeaders(),
+      timeout: 30000,
+    });
 
-      // Simulated bounding box data for visual overlays in the frontend
-      const mockBboxes = [];
-      const numBoxes = Math.min(10, result.text.replace(/\s+/g, '').length);
-      for (let i = 0; i < numBoxes; i++) {
-        mockBboxes.push({
-          x: Math.floor(20 + Math.random() * 60),
-          y: Math.floor(20 + Math.random() * 60),
-          width: Math.floor(8 + Math.random() * 12),
-          height: Math.floor(12 + Math.random() * 16),
-          confidence: parseFloat((95 + Math.random() * 4.9).toFixed(1))
-        });
-      }
+    if (!flaskRes.ok) {
+      const errBody = await flaskRes.text();
+      console.error('Flask error:', flaskRes.status, errBody);
+      return res.status(502).json({ success: false, message: 'ML inference error from Flask' });
+    }
 
-      return res.status(200).json({
-        success: true,
-        detectedText: result.text,
-        confidence: `${result.confidence}%`,
-        model: 'YOLOv8n-Braille (v1.0.4)',
-        processingTime: '184ms',
-        bboxes: mockBboxes
+    const mlResult = await flaskRes.json();
+
+    const language = req.body.language || req.query.language || 'EN';
+    let detectedText = mlResult.detectedText || 'Unknown';
+
+    if (language === 'HI' && mlResult.success) {
+      detectedText = detectedText + ' (हिन्दी मोड)';
+    }
+
+    const numBoxes = Math.min(8, detectedText.replace(/\s+/g, '').length || 1);
+    const mockBboxes = [];
+    for (let i = 0; i < numBoxes; i++) {
+      mockBboxes.push({
+        x:          Math.floor(10 + Math.random() * 70),
+        y:          Math.floor(10 + Math.random() * 70),
+        width:      Math.floor(8  + Math.random() * 12),
+        height:     Math.floor(12 + Math.random() * 16),
+        confidence: parseFloat((93 + Math.random() * 6).toFixed(1)),
       });
-    }, 1500);
+    }
 
-  } catch (error) {
-    console.error('Detection API error:', error);
-    return res.status(500).json({ success: false, message: 'Inference engine error' });
+    return res.status(200).json({
+      success:        mlResult.success,
+      detectedText:   detectedText,
+      pattern:        mlResult.pattern        || '',
+      confidence:     mlResult.confidence     || '—',
+      model:          mlResult.model          || 'YOLOv8n-Braille + OpenCV',
+      processingTime: mlResult.processingTime || '—',
+      bboxes:         mockBboxes,
+    });
+
+  } catch (err) {
+    console.error('Detection proxy error:', err.message);
+    if (err.code === 'ECONNREFUSED' || err.type === 'request-timeout') {
+      return res.status(503).json({
+        success: false,
+        message: 'ML backend offline. Start flask_api.py first.',
+      });
+    }
+    return res.status(500).json({ success: false, message: err.message });
   }
 });
 
-// Fallback to index.html for undefined frontend routes
+async function checkFlask() {
+  try {
+    const r = await fetch(`${FLASK_API}/ping`, { timeout: 3000 });
+    const j = await r.json();
+    console.log('  Flask ML API:', j.message);
+  } catch {
+    console.warn('  Flask ML API not reachable at', FLASK_API);
+    console.warn('  Run:  python flask_api.py');
+  }
+}
+
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/index.html'));
+  res.sendFile(path.join(__dirname, '..', 'frontend', 'index.html'));
 });
 
-// Start Server
-app.listen(PORT, () => {
-  console.log(`===================================================`);
+app.listen(PORT, async () => {
+  console.log('===================================================');
   console.log(`  BrailleAI Server running at: http://localhost:${PORT}`);
-  console.log(`  Serving Frontend from: ${path.join(__dirname, '../frontend')}`);
-  console.log(`  Press Ctrl+C to terminate`);
-  console.log(`===================================================`);
+  console.log('===================================================');
+  await checkFlask();
 });

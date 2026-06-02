@@ -5,25 +5,97 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BrailleAI Dashboard | SEE BEYOND SIGHT</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    .btn-speech-readout {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 10px;
+      background: rgba(124, 58, 237, 0.18);
+      color: #a78bfa;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+      flex-shrink: 0;
+    }
+    .btn-speech-readout svg {
+      width: 20px; height: 20px;
+      fill: none; stroke: currentColor;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+    .btn-speech-readout:hover {
+      background: rgba(124, 58, 237, 0.35);
+      box-shadow: 0 0 14px rgba(124, 58, 237, 0.4);
+    }
+    .btn-speech-readout.tts-playing {
+      background: rgba(124, 58, 237, 0.45);
+      color: #c4b5fd;
+      animation: tts-pulse 1.4s ease-in-out infinite;
+    }
+    @keyframes tts-pulse {
+      0%   { box-shadow: 0 0 0 0   rgba(167,139,250,0.7); }
+      70%  { box-shadow: 0 0 0 10px rgba(167,139,250,0);  }
+      100% { box-shadow: 0 0 0 0   rgba(167,139,250,0);   }
+    }
+    .btn-speech-readout.tts-paused {
+      background: rgba(245, 158, 11, 0.2);
+      color: #fbbf24;
+    }
+    .tts-controls-strip {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+    .tts-controls-strip.tts-visible { display: flex; }
+    .btn-tts-stop {
+      display: flex; align-items: center; gap: 5px;
+      padding: 6px 12px; border: none; border-radius: 8px;
+      background: rgba(239, 68, 68, 0.18); color: #f87171;
+      font-size: 12px; cursor: pointer; transition: background 0.2s;
+    }
+    .btn-tts-stop:hover { background: rgba(239, 68, 68, 0.35); }
+    .btn-tts-stop svg { width: 13px; height: 13px; fill: currentColor; }
+    .tts-speed-label { font-size: 11px; color: rgba(255,255,255,0.45); margin-left: 4px; }
+    .tts-speed-select {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: #c4b5fd; border-radius: 6px;
+      padding: 4px 8px; font-size: 12px; cursor: pointer;
+    }
+    #result-translation.tts-speaking-highlight {
+      background: rgba(124, 58, 237, 0.12);
+      border-radius: 6px; padding: 4px 8px; transition: background 0.3s;
+    }
+    .btn-speech-readout .tts-tooltip {
+      position: absolute; bottom: calc(100% + 6px);
+      left: 50%; transform: translateX(-50%);
+      background: rgba(30,20,60,0.95); color: #e2e8f0;
+      font-size: 11px; padding: 4px 8px; border-radius: 5px;
+      white-space: nowrap; pointer-events: none;
+      opacity: 0; transition: opacity 0.15s;
+    }
+    .btn-speech-readout:hover .tts-tooltip { opacity: 1; }
+  </style>
 </head>
 <body>
 
-  <!-- Background Glow Blobs -->
   <div class="bg-glow-blobs">
     <div class="blob blob-1"></div>
     <div class="blob blob-2"></div>
     <div class="blob blob-3"></div>
   </div>
 
-  <!-- Particle canvas for drifting star dust -->
   <canvas id="particles-canvas"></canvas>
 
-  <!-- Main Container -->
   <div class="app-container">
 
-    <!-- Fixed Left Sidebar -->
     <aside class="sidebar">
-      <!-- Logo Header -->
       <div class="sidebar-header">
         <div class="logo-container">
           <h1 class="logo-text">Braille<span>AI</span></h1>
@@ -31,98 +103,61 @@
         <div class="sidebar-subtitle">V1.0 - HACKATHON BUILD</div>
       </div>
 
-      <!-- Navigation links -->
       <ul class="sidebar-menu">
         <li class="menu-item active" data-tab="detect">
           <a href="#" class="menu-link">
-            <svg viewBox="0 0 24 24">
-              <circle cx="12" cy="12" r="10"></circle>
-              <circle cx="12" cy="12" r="6"></circle>
-              <circle cx="12" cy="12" r="1"></circle>
-            </svg>
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="1"></circle></svg>
             <span>Detect</span>
           </a>
         </li>
         <li class="menu-item" data-tab="camera">
           <a href="#" class="menu-link">
-            <svg viewBox="0 0 24 24">
-              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-              <circle cx="12" cy="13" r="4"></circle>
-            </svg>
+            <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
             <span>Live Camera</span>
           </a>
         </li>
         <li class="menu-item" data-tab="learn">
           <a href="#" class="menu-link">
-            <svg viewBox="0 0 24 24">
-              <rect x="3" y="3" width="7" height="9" rx="1"></rect>
-              <rect x="14" y="3" width="7" height="9" rx="1"></rect>
-              <rect x="3" y="14" width="7" height="7" rx="1"></rect>
-              <rect x="14" y="14" width="7" height="7" rx="1"></rect>
-            </svg>
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1"></rect><rect x="14" y="3" width="7" height="9" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect></svg>
             <span>Learn Braille</span>
           </a>
         </li>
         <li class="menu-item" data-tab="about">
           <a href="#" class="menu-link">
-            <svg viewBox="0 0 24 24">
-              <circle cx="12" cy="12" r="10"></circle>
-              <line x1="12" y1="16" x2="12" y2="12"></line>
-              <line x1="12" y1="8" x2="12.01" y2="8"></line>
-            </svg>
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
             <span>About</span>
           </a>
         </li>
       </ul>
 
-      <!-- System Status Indicators -->
       <div class="system-status-container">
         <div class="status-section-title">System Status</div>
-        
         <div class="status-card-yolo">
           <div class="status-header-yolo">
             <div class="status-badge-dot">
-              <svg viewBox="0 0 24 24">
-                <polyline points="20 6 9 17 4 12"></polyline>
-              </svg>
+              <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
             </div>
             <span>YOLOv8n – Ready</span>
           </div>
           <div class="status-desc-yolo">Model Loaded Successfully</div>
         </div>
-
         <div class="stats-row">
-          <div class="stat-card">
-            <div class="stat-label">Dataset</div>
-            <div class="stat-value">640+ imgs</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">Classes</div>
-            <div class="stat-value">156</div>
-          </div>
+          <div class="stat-card"><div class="stat-label">Dataset</div><div class="stat-value">640+ imgs</div></div>
+          <div class="stat-card"><div class="stat-label">Classes</div><div class="stat-value">156</div></div>
         </div>
-
-        <!-- Language Pill Selector -->
         <div class="lang-selector-card">
           <div class="lang-left">
-            <svg viewBox="0 0 24 24">
-              <circle cx="12" cy="12" r="10"></circle>
-              <line x1="2" y1="12" x2="22" y2="12"></line>
-              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
-            </svg>
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
             <span>Lang</span>
           </div>
           <select id="lang-select" class="lang-selector-select">
             <option value="EN" selected>EN</option>
             <option value="HI">HI</option>
           </select>
-          <svg class="lang-chevron" viewBox="0 0 24 24">
-            <polyline points="6 9 12 15 18 9"></polyline>
-          </svg>
+          <svg class="lang-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
         </div>
       </div>
 
-      <!-- 3D Rotating Glass Cube Area -->
       <div class="sidebar-cube-wrapper">
         <div class="cube-scene">
           <div class="cube-face face-front"></div>
@@ -136,98 +171,60 @@
       </div>
     </aside>
 
-    <!-- Main Section -->
     <main class="main-content">
-      
-      <!-- Top navbar headers (dynamic authentication triggers) -->
+
       <header class="top-navbar">
         <button id="hamburger-menu-btn" class="hamburger-btn">
-          <svg viewBox="0 0 24 24">
-            <line x1="3" y1="12" x2="21" y2="12"></line>
-            <line x1="3" y1="6" x2="21" y2="6"></line>
-            <line x1="3" y1="18" x2="21" y2="18"></line>
-          </svg>
+          <svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
         </button>
-
         <div id="auth-header-container" class="nav-auth-buttons">
-          <!-- Populated dynamically via script.js -->
           <a href="login.html" class="btn-auth btn-auth-login">
-            <svg viewBox="0 0 24 24">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-              <circle cx="12" cy="7" r="4"></circle>
-            </svg>
+            <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
             <span>Login</span>
           </a>
           <a href="signup.html" class="btn-auth btn-auth-signup">
-            <svg viewBox="0 0 24 24">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
+            <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
             <span>Sign Up</span>
           </a>
         </div>
       </header>
 
-      <!-- VIEW 1: DETECT VIEW (ACTIVE) -->
+      <!-- VIEW 1: DETECT -->
       <section id="detect-panel" class="page-view active-panel">
-        
-        <!-- Center aligned title block -->
+
         <div class="hero-section">
           <h2 class="hero-title">Braille<span>AI</span></h2>
           <div class="hero-subtitle">SEE BEYOND SIGHT — YOLOv8 + OpenCV</div>
           <div class="pulsing-dots-container">
-            <div class="pulsing-dot"></div>
-            <div class="pulsing-dot"></div>
-            <div class="pulsing-dot"></div>
-            <div class="pulsing-dot"></div>
-            <div class="pulsing-dot"></div>
-            <div class="pulsing-dot"></div>
+            <div class="pulsing-dot"></div><div class="pulsing-dot"></div>
+            <div class="pulsing-dot"></div><div class="pulsing-dot"></div>
+            <div class="pulsing-dot"></div><div class="pulsing-dot"></div>
           </div>
         </div>
 
-        <!-- Image Upload Card Area -->
         <div class="glass-panel-section">
           <div class="section-label">
-            <svg viewBox="0 0 24 24">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-              <rect x="7" y="7" width="3" height="3"></rect>
-              <line x1="7" y1="13" x2="17" y2="13"></line>
-              <line x1="7" y1="17" x2="17" y2="17"></line>
-              <line x1="13" y1="7" x2="17" y2="7"></line>
-            </svg>
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><rect x="7" y="7" width="3" height="3"></rect><line x1="7" y1="13" x2="17" y2="13"></line><line x1="7" y1="17" x2="17" y2="17"></line><line x1="13" y1="7" x2="17" y2="7"></line></svg>
             <span>Upload Braille Image</span>
           </div>
-
-          <!-- Top file limits bar -->
           <div class="upload-top-bar">
             <button id="upload-bar-btn" class="btn-upload-browse">
-              <svg viewBox="0 0 24 24">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="17 8 12 3 7 8"></polyline>
-                <line x1="12" y1="3" x2="12" y2="15"></line>
-              </svg>
+              <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
               <span>Upload</span>
             </button>
             <span class="upload-limits-text">200MB per file • PNG, JPG, JPEG</span>
             <input type="file" id="file-hidden-input" accept="image/png, image/jpeg, image/jpg" style="display: none;">
           </div>
 
-          <!-- Drag and drop zone -->
           <div id="drop-zone" class="drag-drop-zone">
-            <!-- Initial upload prompt -->
             <div id="upload-prompt" class="upload-prompt-content">
               <div class="cloud-icon-wrapper">
-                <svg viewBox="0 0 24 24">
-                  <path d="M22 19a5 5 0 0 0-4.99-5H18a6 6 0 0 0-12-1.92A5 5 0 0 0 1 17a4 4 0 0 0 4 4h15a5 5 0 0 0 2-3.08z"></path>
-                  <polyline points="16 11 12 7 8 11"></polyline>
-                  <line x1="12" y1="7" x2="12" y2="17"></line>
-                </svg>
+                <svg viewBox="0 0 24 24"><path d="M22 19a5 5 0 0 0-4.99-5H18a6 6 0 0 0-12-1.92A5 5 0 0 0 1 17a4 4 0 0 0 4 4h15a5 5 0 0 0 2-3.08z"></path><polyline points="16 11 12 7 8 11"></polyline><line x1="12" y1="7" x2="12" y2="17"></line></svg>
               </div>
               <h3 class="drag-title">Drop Braille Image Here</h3>
               <p class="drag-subtitle">or click to browse</p>
             </div>
 
-            <!-- Image preview element -->
             <div id="upload-preview-container" class="preview-container">
               <div class="preview-wrapper">
                 <img id="preview-img-el" class="preview-image" src="" alt="Selected Braille">
@@ -240,19 +237,15 @@
                 </div>
                 <div class="status-badge-ready">Ready For Detection</div>
               </div>
-              
               <div class="action-buttons-group">
                 <button id="detect-now-btn" class="btn-detect-trigger">
-                  <svg viewBox="0 0 24 24">
-                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                  </svg>
+                  <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
                   <span>Detect Braille</span>
                 </button>
                 <button id="cancel-upload-btn" class="btn-cancel-upload">Cancel</button>
               </div>
             </div>
 
-            <!-- Loading overlay status -->
             <div id="detection-loading-state" class="detection-loader">
               <div class="loader-spinner"></div>
               <div id="loader-status-text" class="loader-text">Initializing Inference...</div>
@@ -260,16 +253,10 @@
           </div>
         </div>
 
-        <!-- Detection Results Section -->
+        <!-- Detection Results -->
         <div class="detection-result-section">
           <div class="section-label">
-            <svg viewBox="0 0 24 24">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-              <polyline points="14 2 14 8 20 8"></polyline>
-              <line x1="16" y1="13" x2="8" y2="13"></line>
-              <line x1="16" y1="17" x2="8" y2="17"></line>
-              <polyline points="10 9 9 9 8 9"></polyline>
-            </svg>
+            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
             <span>Detection Result Area</span>
           </div>
 
@@ -293,188 +280,133 @@
               </div>
             </div>
 
+            <!-- Detected text + ONE TTS button -->
             <div class="result-translation-container">
               <div class="translation-output-block">
                 <div class="translation-label">Detected Text</div>
                 <div id="result-translation" class="translation-text-value">HELLO WORLD</div>
               </div>
-              <!-- Text To Speech Playback -->
-              <button id="tts-play-btn" class="btn-speech-readout" title="Listen translation">
-                <svg viewBox="0 0 24 24">
+
+              <button id="tts-play-btn" class="btn-speech-readout" title="Listen to detected text">
+                <svg id="tts-icon-speak" viewBox="0 0 24 24">
                   <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
                   <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
                 </svg>
+                <svg id="tts-icon-pause" viewBox="0 0 24 24" style="display:none;">
+                  <rect x="6" y="4" width="4" height="16" rx="1"></rect>
+                  <rect x="14" y="4" width="4" height="16" rx="1"></rect>
+                </svg>
+                <svg id="tts-icon-resume" viewBox="0 0 24 24" style="display:none;">
+                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                </svg>
+                <span class="tts-tooltip" id="tts-btn-tooltip">Listen</span>
               </button>
             </div>
+
+            <!-- Stop + Speed controls (hidden until playing) -->
+            <div class="tts-controls-strip" id="tts-controls-strip">
+              <button class="btn-tts-stop" id="tts-stop-btn">
+                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg>
+                Stop
+              </button>
+              <span class="tts-speed-label">Speed:</span>
+              <select class="tts-speed-select" id="tts-speed-select">
+                <option value="0.7">0.7×</option>
+                <option value="1" selected>1×</option>
+                <option value="1.3">1.3×</option>
+                <option value="1.6">1.6×</option>
+                <option value="2">2×</option>
+              </select>
+            </div>
+
           </div>
         </div>
 
-        <!-- Features Grid at Bottom -->
         <div class="features-grid">
-          <!-- Card 1 -->
-          <div class="feature-glass-card">
-            <div class="feature-icon-wrapper">⚡</div>
-            <h4 class="feature-title">Fast Detection</h4>
-            <p class="feature-desc">Real-time processing with YOLOv8. Experience rapid sub-200ms translations.</p>
-          </div>
-          <!-- Card 2 -->
-          <div class="feature-glass-card">
-            <div class="feature-icon-wrapper">🎯</div>
-            <h4 class="feature-title">High Accuracy</h4>
-            <p class="feature-desc">Trained on 640+ premium images. Recognizes characters under varying lights.</p>
-          </div>
-          <!-- Card 3 -->
-          <div class="feature-glass-card">
-            <div class="feature-icon-wrapper">🌐</div>
-            <h4 class="feature-title">Multi-Language</h4>
-            <p class="feature-desc">Supports English and Hindi. Toggle dynamic outputs directly in the selector.</p>
-          </div>
-          <!-- Card 4 -->
-          <div class="feature-glass-card">
-            <div class="feature-icon-wrapper">🛡️</div>
-            <h4 class="feature-title">Secure & Private</h4>
-            <p class="feature-desc">Your uploaded data is processed locally. We guarantee end-to-end user safety.</p>
-          </div>
+          <div class="feature-glass-card"><div class="feature-icon-wrapper">⚡</div><h4 class="feature-title">Fast Detection</h4><p class="feature-desc">Real-time processing with YOLOv8. Experience rapid sub-200ms translations.</p></div>
+          <div class="feature-glass-card"><div class="feature-icon-wrapper">🎯</div><h4 class="feature-title">High Accuracy</h4><p class="feature-desc">Trained on 640+ premium images. Recognizes characters under varying lights.</p></div>
+          <div class="feature-glass-card"><div class="feature-icon-wrapper">🌐</div><h4 class="feature-title">Multi-Language</h4><p class="feature-desc">Supports English and Hindi. Toggle dynamic outputs directly in the selector.</p></div>
+          <div class="feature-glass-card"><div class="feature-icon-wrapper">🛡️</div><h4 class="feature-title">Secure & Private</h4><p class="feature-desc">Your uploaded data is processed locally. We guarantee end-to-end user safety.</p></div>
         </div>
 
       </section>
 
-      <!-- VIEW 2: LIVE CAMERA VIEW -->
+      <!-- VIEW 2: CAMERA -->
       <section id="camera-panel" class="page-view">
         <div class="hero-section">
           <h2 class="hero-title">Live <span>Camera</span></h2>
           <div class="hero-subtitle">Point and translate in real-time</div>
         </div>
-
         <div class="glass-panel-section" style="max-width: 800px; width: 100%; margin: 0 auto;">
           <div class="camera-view-container">
             <div id="camera-viewfinder" class="camera-screen-glass">
-              
-              <!-- Video Stream -->
               <video id="webcam-stream" class="camera-stream" autoplay playsinline></video>
               <canvas id="camera-canvas-overlay" class="preview-overlay-canvas" style="display: none;"></canvas>
-
-              <!-- Scan Laser Lines -->
               <div id="camera-laser" class="camera-overlay-laser"></div>
               <div id="camera-reticle" class="camera-target-reticle"></div>
-
-              <!-- Corner markings -->
-              <div class="camera-corners">
-                <div class="camera-corners-inner"></div>
-              </div>
-
-              <!-- Top Left Status Pill -->
+              <div class="camera-corners"><div class="camera-corners-inner"></div></div>
               <div id="camera-pill" class="camera-status-pill">
                 <div class="camera-status-dot"></div>
                 <span id="camera-status-label">Camera Offline</span>
               </div>
-
-              <!-- Placeholder/Initial camera setup prompts -->
               <div id="camera-placeholder" class="camera-placeholder-content">
                 <div class="camera-icon-glow">
-                  <svg viewBox="0 0 24 24">
-                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-                    <circle cx="12" cy="13" r="4"></circle>
-                  </svg>
+                  <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
                 </div>
                 <h3 class="camera-placeholder-title">Live Camera Coming Soon</h3>
-                <p class="camera-placeholder-subtitle">Click "Start Camera" to test the webcam viewport. Point your camera at a Braille page for character scans.</p>
+                <p class="camera-placeholder-subtitle">Click "Start Camera" to test the webcam viewport.</p>
                 <button id="start-camera-btn" class="btn-camera-toggle" style="margin-top: 10px;">Start Camera</button>
               </div>
-
             </div>
-
-            <!-- Output panel for camera detection -->
             <div id="camera-translation-result" class="result-translation-container" style="width: 100%; display: none;">
               <div class="translation-output-block">
                 <div class="translation-label">Realtime Scan Output</div>
                 <div id="camera-result-text" class="translation-text-value" style="font-size: 20px;">READY TO CAPTURE...</div>
               </div>
               <button id="camera-tts-btn" class="btn-speech-readout">
-                <svg viewBox="0 0 24 24">
-                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-                </svg>
+                <svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
               </button>
             </div>
-            
             <button id="stop-camera-btn" class="btn-cancel-upload" style="display: none; align-self: center;">Stop Feed</button>
-
           </div>
         </div>
       </section>
 
-      <!-- VIEW 3: LEARN BRAILLE VIEW -->
+      <!-- VIEW 3: LEARN -->
       <section id="learn-panel" class="page-view">
         <div class="hero-section">
           <h2 class="hero-title">Learn <span>Braille</span></h2>
           <div class="hero-subtitle">Interactive Grade-1 Character Guide</div>
         </div>
-
         <div class="glass-panel-section">
           <div class="section-label">
-            <svg viewBox="0 0 24 24">
-              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-            </svg>
+            <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
             <span>Alphabet Catalog (A - Z)</span>
           </div>
-
-          <div id="braille-alphabet-grid" class="learn-grid-container">
-            <!-- Rendered dynamically by script.js -->
-          </div>
+          <div id="braille-alphabet-grid" class="learn-grid-container"></div>
         </div>
       </section>
 
-      <!-- VIEW 4: ABOUT VIEW -->
+      <!-- VIEW 4: ABOUT -->
       <section id="about-panel" class="page-view">
         <div class="hero-section">
           <h2 class="hero-title">Vision For <span>All</span></h2>
           <div class="hero-subtitle">Making translation accessible to everyone</div>
         </div>
-
         <div class="glass-panel-section" style="max-width: 720px; width: 100%; margin: 0 auto;">
           <div class="about-hero-block">
             <h3 class="avatar-name" style="font-size: 24px; margin-bottom: 8px;">BrailleAI Project Dashboard</h3>
             <p class="avatar-role" style="font-size: 15px;">A premium full-stack build designed to translate and digitize Braille print via computer vision.</p>
           </div>
-
-          <!-- Team Profiles -->
           <div class="about-avatar-row">
-            <div class="about-avatar-card">
-              <div class="avatar-circle">JD</div>
-              <h4 class="avatar-name">Jiya Deshmukh</h4>
-              <p class="avatar-role">Co-Founder & Lead ML</p>
-            </div>
-            <div class="about-avatar-card">
-              <div class="avatar-circle">SV</div>
-              <h4 class="avatar-name">Sandhya Vishwakarma</h4>
-              <p class="avatar-role">Co-Founder & Web Architect</p>
-            </div>
+            <div class="about-avatar-card"><div class="avatar-circle">JD</div><h4 class="avatar-name">Jiya Deshmukh</h4><p class="avatar-role">Co-Founder & Lead ML</p></div>
+            <div class="about-avatar-card"><div class="avatar-circle">SV</div><h4 class="avatar-name">Sandhya Vishwakarma</h4><p class="avatar-role">Co-Founder & Web Architect</p></div>
           </div>
-
-          <!-- Academic & Stack Info Table -->
           <table class="about-credentials-table">
-            <tr>
-              <td class="label-cell">College</td>
-              <td class="val-cell">Acropolis Institute of Technology and Research</td>
-            </tr>
-            <tr>
-              <td class="label-cell">Branch</td>
-              <td class="val-cell">AIML — 2nd Year</td>
-            </tr>
-            <tr>
-              <td class="label-cell">Stack</td>
-              <td class="val-cell">YOLOv8 · OpenCV · Streamlit · gTTS · Roboflow</td>
-            </tr>
-            <tr>
-              <td class="label-cell">GitHub</td>
-              <td class="val-cell">
-                <a href="https://github.com/Jiya0937/Vision-for-All" target="_blank" class="about-link">
-                  github.com/Jiya0937/Vision-for-All
-                </a>
-              </td>
-            </tr>
+            <tr><td class="label-cell">College</td><td class="val-cell">Acropolis Institute of Technology and Research</td></tr>
+            <tr><td class="label-cell">Branch</td><td class="val-cell">AIML — 2nd Year</td></tr>
+            <tr><td class="label-cell">Stack</td><td class="val-cell">YOLOv8 · OpenCV · Streamlit · gTTS · Roboflow</td></tr>
+            <tr><td class="label-cell">GitHub</td><td class="val-cell"><a href="https://github.com/Jiya0937/Vision-for-All" target="_blank" class="about-link">github.com/Jiya0937/Vision-for-All</a></td></tr>
           </table>
         </div>
       </section>
@@ -482,19 +414,11 @@
     </main>
   </div>
 
-  <!-- Microsoft Edge style system toast notification (Bottom Right corner) -->
+  <!-- Toast -->
   <div id="edge-toast" class="toast-notification">
     <div class="toast-header">
-      <div class="toast-source-info">
-        <div class="toast-source-logo">un</div>
-        <span>unstoppable.com</span>
-      </div>
-      <button id="toast-close-x" class="toast-close-btn" title="Dismiss notification">
-        <svg viewBox="0 0 24 24">
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-      </button>
+      <div class="toast-source-info"><div class="toast-source-logo">un</div><span>unstoppable.com</span></div>
+      <button id="toast-close-x" class="toast-close-btn"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
     </div>
     <div class="toast-content-row">
       <div class="toast-avatar">un</div>
@@ -507,7 +431,131 @@
     <a href="https://github.com/Jiya0937/Vision-for-All" target="_blank" class="btn-toast-action">Check Now!</a>
   </div>
 
-  <!-- Import Main Client Script -->
   <script src="script.js"></script>
+
+  <!-- TEXT-TO-SPEECH ENGINE -->
+  <script>
+  (function () {
+    if (!('speechSynthesis' in window)) {
+      var btn = document.getElementById('tts-play-btn');
+      if (btn) { btn.style.opacity = '0.4'; btn.style.cursor = 'not-allowed'; btn.title = 'TTS not supported'; }
+      return;
+    }
+
+    var playBtn      = document.getElementById('tts-play-btn');
+    var stopBtn      = document.getElementById('tts-stop-btn');
+    var speedSelect  = document.getElementById('tts-speed-select');
+    var controlStrip = document.getElementById('tts-controls-strip');
+    var translEl     = document.getElementById('result-translation');
+    var tooltip      = document.getElementById('tts-btn-tooltip');
+    var iconSpeak    = document.getElementById('tts-icon-speak');
+    var iconPause    = document.getElementById('tts-icon-pause');
+    var iconResume   = document.getElementById('tts-icon-resume');
+
+    var ttsState = 'idle';  // 'idle' | 'playing' | 'paused'
+    var utterance = null;
+
+    function showIcon(which) {
+      iconSpeak.style.display  = which === 'speak'  ? '' : 'none';
+      iconPause.style.display  = which === 'pause'  ? '' : 'none';
+      iconResume.style.display = which === 'resume' ? '' : 'none';
+    }
+
+    function applyState(state) {
+      ttsState = state;
+      playBtn.classList.remove('tts-playing', 'tts-paused');
+      if (state === 'idle') {
+        showIcon('speak');
+        if (tooltip) tooltip.textContent = 'Listen';
+        controlStrip.classList.remove('tts-visible');
+        translEl.classList.remove('tts-speaking-highlight');
+      } else if (state === 'playing') {
+        showIcon('pause');
+        if (tooltip) tooltip.textContent = 'Pause';
+        playBtn.classList.add('tts-playing');
+        controlStrip.classList.add('tts-visible');
+        translEl.classList.add('tts-speaking-highlight');
+      } else if (state === 'paused') {
+        showIcon('resume');
+        if (tooltip) tooltip.textContent = 'Resume';
+        playBtn.classList.add('tts-paused');
+        controlStrip.classList.add('tts-visible');
+      }
+    }
+
+    function getText() {
+      return (translEl ? translEl.textContent.trim() : '') || 'No detected text available.';
+    }
+
+    function buildUtterance(text) {
+      utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = parseFloat(speedSelect.value) || 1;
+      utterance.lang = 'en-US';
+      var voices = window.speechSynthesis.getVoices();
+      var v = voices.find(function(v){ return v.lang.startsWith('en') && v.localService; })
+           || voices.find(function(v){ return v.lang.startsWith('en'); });
+      if (v) utterance.voice = v;
+      utterance.onstart = function() { applyState('playing'); };
+      utterance.onend   = function() { applyState('idle'); };
+      utterance.onerror = function(e) { if (e.error !== 'interrupted') console.warn('TTS:', e.error); applyState('idle'); };
+      return utterance;
+    }
+
+    // Play / Pause toggle
+    playBtn.addEventListener('click', function() {
+      var synth = window.speechSynthesis;
+      if (ttsState === 'idle') {
+        synth.cancel();
+        var utt = buildUtterance(getText());
+        setTimeout(function(){ synth.speak(utt); }, 50);
+        applyState('playing');
+      } else if (ttsState === 'playing') {
+        synth.pause();
+        applyState('paused');
+      } else if (ttsState === 'paused') {
+        synth.resume();
+        applyState('playing');
+      }
+    });
+
+    // Stop
+    stopBtn.addEventListener('click', function() {
+      window.speechSynthesis.cancel();
+      applyState('idle');
+    });
+
+    // Speed change
+    speedSelect.addEventListener('change', function() {
+      if (ttsState === 'idle') return;
+      var synth = window.speechSynthesis;
+      synth.cancel();
+      var utt = buildUtterance(getText());
+      setTimeout(function(){ synth.speak(utt); }, 50);
+      applyState('playing');
+    });
+
+    // Stop when switching tabs
+    document.querySelectorAll('.menu-item').forEach(function(item) {
+      item.addEventListener('click', function() {
+        if (ttsState !== 'idle') { window.speechSynthesis.cancel(); applyState('idle'); }
+      });
+    });
+
+    // Camera TTS (simple)
+    var camBtn  = document.getElementById('camera-tts-btn');
+    var camText = document.getElementById('camera-result-text');
+    if (camBtn && camText) {
+      camBtn.addEventListener('click', function() {
+        var synth = window.speechSynthesis;
+        if (synth.speaking) { synth.cancel(); return; }
+        var utt = new SpeechSynthesisUtterance(camText.textContent.trim() || 'No result.');
+        utt.lang = 'en-US';
+        synth.speak(utt);
+      });
+    }
+
+  })();
+  </script>
+
 </body>
 </html>
